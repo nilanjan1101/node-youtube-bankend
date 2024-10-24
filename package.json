@@ -1,0 +1,16 @@
+{
+  "name": "backend-u-tube",
+  "version": "1.0.0",
+  "description": "A Backend Project - youtube",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "javascript",
+    "node",
+    "backend"
+  ],
+  "author": "Nilanjan Chakraborty",
+  "license": "ISC"
+}
