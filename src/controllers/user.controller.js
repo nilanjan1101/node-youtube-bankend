@@ -16,14 +16,14 @@ const registerUser = asyncHandler(async (req, res) => {
   // check response
 
   const { username, email, fullName, password } = req.body;
-  console.log("Email:", email);
+  //   console.log("Email:", email);
 
   if (
     [fullName, email, username, password].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "All Fields are Required");
   }
-  const existedUser = User.findOne({
+  const existedUser = await User.findOne({
     $or: [{ username }, { email }],
   });
 
@@ -34,8 +34,31 @@ const registerUser = asyncHandler(async (req, res) => {
     );
   }
 
-  const avatarLocalPath = req.files.avatar[0]?.path;
-  const coverImagePath = req.files.coverImage[0]?.path;
+  //   console.log(req.files);
+
+  //   const avatarLocalPath = req.files.avatar[0]?.path;
+
+  let avatarLocalPath;
+
+  if (
+    req.files &&
+    Array.isArray(req.files.avatar) &&
+    req.files.avatar.length > 0
+  ) {
+    avatarLocalPath = req.files.avatar[0].path;
+  }
+
+  //   const coverImagePath = req.files.coverImage[0]?.path;
+
+  let coverImagePath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImagePath = req.files.coverImage[0].path;
+  }
+
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required!");
   }
@@ -57,7 +80,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
-  if (createdUser) {
+  if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering the user");
   }
   return res
