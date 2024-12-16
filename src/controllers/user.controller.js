@@ -1,8 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudnary.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
@@ -120,6 +120,13 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const { username, email, password } = req.body;
 
+  // console.log(`req body for login: ${req.body}`);
+  // console.log(`
+  //   username: ${username},
+  //   email: ${email},
+  //   password: ${password},
+  //   `);
+
   if (!username && !email) {
     throw new ApiError(400, "Username or Email is required!");
   }
@@ -174,8 +181,11 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      // $set: {
+      //   refreshToken: undefined,
+      // },
+      $unset: {
+        refreshToken: 1, // to remove the field from the document
       },
     },
     {
@@ -217,10 +227,10 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new ApiError(401, "Refresh Token is Expired or used");
     }
 
-    options({
+    const options = {
       httpOnly: true,
       secure: true,
-    });
+    };
 
     const { accessToken, newRefreshToken } =
       await generateAccessAndRefreshTokens(user._id);
@@ -243,8 +253,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
-  const user = User.findById(req.user?._id);
-  const isPasswordCorrect = await User.isPasswordCorrect(oldPassword);
+  const user = await User.findById(req.user?._id);
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
   if (!isPasswordCorrect) {
     throw new ApiError(400, "Old Invalid Password");
@@ -405,7 +415,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-  const user = User.aggregate([
+  const user = await User.aggregate([
     {
       $match: {
         _id: new mongoose.Types.ObjectId(req.user._id),
@@ -424,13 +434,15 @@ const getWatchHistory = asyncHandler(async (req, res) => {
               localField: "owner",
               foreignField: "_id",
               as: "owner",
-              pipeline: {
-                $project: {
-                  fullName: 1,
-                  username: 1,
-                  avatar: 1,
+              pipeline: [
+                {
+                  $project: {
+                    fullName: 1,
+                    username: 1,
+                    avatar: 1,
+                  },
                 },
-              },
+              ],
             },
           },
           {
@@ -444,6 +456,18 @@ const getWatchHistory = asyncHandler(async (req, res) => {
       },
     },
   ]);
+
+  // console.log(req.user._id);
+  // new_id: new mongoose.Types.ObjectId(req.user._id);
+  // console.log(new_id);
+
+  // console.log(`user for watchHistory: ${user}`);
+  // if (!user || user.length === 0) {
+  //   return res
+  //     .status(404)
+  //     .json(new ApiResponse(404, [], "No watch history found for the user."));
+  // }
+
   return res
     .status(200)
     .json(
